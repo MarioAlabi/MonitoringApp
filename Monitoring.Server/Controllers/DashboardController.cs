@@ -28,10 +28,15 @@ public class DashboardController : Controller
             .ToListAsync();
 
         ViewBag.Dominios = await _context.DominiosExpiracion.ToListAsync();
+    
         ViewBag.Alertas = await _context.HistorialAlertas
             .OrderByDescending(a => a.FechaCreacion)
             .Take(15)
             .ToListAsync();
+
+        // Pasar la configuración global a la vista
+        ViewBag.Configuracion = await _context.ConfiguracionesAlertas.FirstOrDefaultAsync() 
+                                ?? new ConfiguracionAlerta();
 
         return View();
     }
@@ -135,6 +140,24 @@ public class DashboardController : Controller
             _context.HistorialAlertas.Remove(alerta);
             await _context.SaveChangesAsync();
         }
+        return RedirectToAction(nameof(Index));
+    }
+    [HttpPost("ActualizarConfiguracion")]
+    public async Task<IActionResult> ActualizarConfiguracion(string correo, int timeout, int diasSsl, int diasDominio)
+    {
+        var config = await _context.ConfiguracionesAlertas.FirstOrDefaultAsync();
+        if (config == null)
+        {
+            config = new ConfiguracionAlerta();
+            _context.ConfiguracionesAlertas.Add(config);
+        }
+
+        config.CorreoDestinatario = correo;
+        config.TimeoutSegundosNodo = timeout;
+        config.DiasAvisoSsl = diasSsl;
+        config.DiasAvisoDominio = diasDominio;
+
+        await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 }

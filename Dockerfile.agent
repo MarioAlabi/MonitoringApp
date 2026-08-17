@@ -1,0 +1,17 @@
+﻿FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY ["MonitoringApp.csproj", "./"]
+RUN dotnet restore "./MonitoringApp.csproj"
+COPY . .
+RUN dotnet publish "MonitoringApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# Variables por defecto configurables al arrancar
+ENV AGENT_SERVER_URL="http://92.113.148.5:8585/api/HeartbeatApi"
+ENV AGENT_TOKEN=""
+ENV AGENT_NODE_IP=""
+
+ENTRYPOINT ["dotnet", "MonitoringApp.dll"]

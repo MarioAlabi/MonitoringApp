@@ -18,14 +18,13 @@ public class HeartbeatApiController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> RecibirLatido([FromBody] HeartbeatPayloadDto payload)
+    public async Task<ActionResult<HeartbeatResponseDto>> RecibirLatido([FromBody] HeartbeatPayloadDto payload)
     {
-        if (string.IsNullOrWhiteSpace(payload.TokenAutenticacion))
+        if (payload == null || string.IsNullOrWhiteSpace(payload.TokenAutenticacion))
         {
-            return Unauthorized(new { error = "Token no proporcionado." });
+            return BadRequest(new HeartbeatResponseDto { Exito = false, Mensaje = "Payload o Token inválido." });
         }
 
-        // 1. Validar Token contra la base de datos
         var nodo = await _context.Nodos
             .Include(n => n.Contenedores)
             .Include(n => n.CertificadosSsl)
@@ -33,49 +32,60 @@ public class HeartbeatApiController : ControllerBase
 
         if (nodo == null)
         {
-            return Unauthorized(new { error = "Token de autenticación inválido." });
+            return Unauthorized(new HeartbeatResponseDto { Exito = false, Mensaje = "Token no autorizado." });
         }
 
-        // 2. Actualizar estado y latido del Nodo
+        // Actualizar datos del nodo
         nodo.UltimoLatido = DateTime.UtcNow;
         nodo.Estado = "ONLINE";
         nodo.AlertaCaidaEnviada = false;
-        if (!string.IsNullOrEmpty(payload.IpDireccion))
+        if (!string.IsNullOrWhiteSpace(payload.IpDireccion))
         {
             nodo.IpDireccion = payload.IpDireccion;
         }
 
-        // 3. Sincronizar Contenedores
+        // Sincronizar contenedores y certificados
         _context.Contenedores.RemoveRange(nodo.Contenedores);
-        foreach (var c in payload.Contenedores)
+        _context.CertificadosSsl.RemoveRange(nodo.CertificadosSsl);
+
+        if (payload.Contenedores != null && payload.Contenedores.Any())
         {
-            _context.Contenedores.Add(new Contenedor
+            foreach (var c in payload.Contenedores)
             {
-                NodoId = nodo.Id,
-                Nombre = c.Nombre,
-                Imagen = c.Imagen,
-                Estado = c.Estado,
-                UltimaActualizacion = DateTime.UtcNow
-            });
+                nodo.Contenedores.Add(new Contenedor
+                {
+                    Nombre = c.Nombre,
+                    Imagen = c.Imagen,
+                    Estado = c.Estado,
+                    UltimaActualizacion = DateTime.UtcNow
+                });
+            }
         }
 
-        // 4. Sincronizar Certificados SSL
-        _context.CertificadosSsl.RemoveRange(nodo.CertificadosSsl);
-        foreach (var cert in payload.Certificados)
+        if (payload.Certificados != null && payload.Certificados.Any())
         {
-            _context.CertificadosSsl.Add(new CertificadoSsl
+            foreach (var cert in payload.Certificados)
             {
-                NodoId = nodo.Id,
-                DominioHost = cert.DominioHost,
-                Puerto = cert.Puerto,
-                FechaExpiracion = cert.FechaExpiracion,
-                DiasRestantes = cert.DiasRestantes,
-                UltimaRevision = DateTime.UtcNow
-            });
+                nodo.CertificadosSsl.Add(new CertificadoSsl
+                {
+                    DominioHost = cert.DominioHost,
+                    Puerto = cert.Puerto,
+                    FechaExpiracion = cert.FechaExpiracion,
+                    DiasRestantes = cert.DiasRestantes,
+                    UltimaRevision = DateTime.UtcNow
+                });
+            }
         }
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { status = "success", mensaje = "Heartbeat procesado correctamente." });
+        // Responder al cliente con su configuración
+        return Ok(new HeartbeatResponseDto
+        {
+            Exito = true,
+            Mensaje = "Sincronizado correctamente.",
+            NuevoIntervaloSegundos = 60,
+            NuevosHostsSsl = new List<string> { "google.com:443" }
+        });
     }
 }

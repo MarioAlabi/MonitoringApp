@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using MonitoringApp.Monitoring.Core.DTOs;
 
@@ -9,17 +10,22 @@ public class AgentWorkerService
     private readonly SslMonitorService _sslService;
     private readonly HttpClient _httpClient;
 
-    // Configuración del Agente
-    private const string ServerUrl = "http://localhost:5179/api/HeartbeatApi";
-    private const string Token = "sec-token-truenas-2026-xyz";
-    private readonly List<string> _hostsParaAuditar = new() { "google.com:443" }; // Agrega hosts o dominios locales
+    private string _serverUrl;
+    private string _token;
+    private int _intervaloSegundos = 60;
+    private List<string> _hostsParaAuditar = new() { "google.com:443" };
 
     public AgentWorkerService()
     {
+        _serverUrl = Environment.GetEnvironmentVariable("AGENT_SERVER_URL") 
+            ?? "http://92.113.148.5:8585/api/HeartbeatApi";
+
+        _token = Environment.GetEnvironmentVariable("AGENT_TOKEN") 
+            ?? "sec-token-truenas-2026-xyz";
+
         _dockerService = new DockerMonitorService();
         _sslService = new SslMonitorService();
 
-        // Handler que ignora errores SSL en entorno de pruebas local
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -29,30 +35,46 @@ public class AgentWorkerService
 
     public async Task IniciarBucleAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("[Agente] Iniciando servicio de recolección...");
+        Console.WriteLine($"[Agente] Conectando hacia: {_serverUrl}");
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                Console.WriteLine($"[Agente {DateTime.Now:HH:mm:ss}] Recolectando métricas locales...");
-
                 var contenedores = await _dockerService.ObtenerContenedoresAsync();
                 var certs = await _sslService.AuditarCertificadosAsync(_hostsParaAuditar);
 
                 var payload = new HeartbeatPayloadDto
                 {
-                    TokenAutenticacion = Token,
-                    IpDireccion = "127.0.0.1",
+                    TokenAutenticacion = _token,
+                    IpDireccion = Environment.GetEnvironmentVariable("AGENT_NODE_IP") ?? "127.0.0.1",
                     Contenedores = contenedores,
                     Certificados = certs
                 };
 
-                var respuesta = await _httpClient.PostAsJsonAsync(ServerUrl, payload, cancellationToken);
+                var respuesta = await _httpClient.PostAsJsonAsync(_serverUrl, payload, cancellationToken);
 
                 if (respuesta.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("[Agente] Latido enviado con éxito (200 OK).");
+                    var configRespuesta = await respuesta.Content.ReadFromJsonAsync<HeartbeatResponseDto>(cancellationToken: cancellationToken);
+                    
+                    if (configRespuesta != null)
+                    {
+                        // 1. Aplicar configuración remota si el servidor la cambia
+                        if (configRespuesta.NuevoIntervaloSegundos.HasValue)
+                            _intervaloSegundos = configRespuesta.NuevoIntervaloSegundos.Value;
+
+                        if (configRespuesta.NuevosHostsSsl != null && configRespuesta.NuevosHostsSsl.Any())
+                            _hostsParaAuditar = configRespuesta.NuevosHostsSsl;
+
+                        // 2. Procesar y ejecutar comandos que mandó el servidor
+                        foreach (var cmd in configRespuesta.ComandosPendientes)
+                        {
+                            EjecutarComando(cmd);
+                        }
+                    }
+
+                    Console.WriteLine($"[Agente] Latido OK -> {_serverUrl} (Próximo ciclo en {_intervaloSegundos}s)");
                 }
                 else
                 {
@@ -61,11 +83,34 @@ public class AgentWorkerService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Agente] Falla en la ejecución del ciclo: {ex.Message}");
+                Console.WriteLine($"[Agente] Error de comunicación: {ex.Message}");
             }
 
-            // Esperar 60 segundos antes del siguiente latido
-            await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(_intervaloSegundos), cancellationToken);
+        }
+    }
+
+    private void EjecutarComando(ComandoRemotoDto comando)
+    {
+        Console.WriteLine($"[Agente] Ejecutando comando remoto: {comando.Accion} ({comando.Parametro})");
+        try
+        {
+            switch (comando.Accion.ToUpper())
+            {
+                case "PING":
+                    Console.WriteLine("[Agente] PONG: El agente está activo y respondiendo.");
+                    break;
+                case "RESTART_CONTAINER":
+                    Process.Start("podman", $"restart {comando.Parametro}");
+                    break;
+                case "CUSTOM_CLI":
+                    Process.Start("/bin/sh", $"-c \"{comando.Parametro}\"");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Agente] Error al ejecutar comando {comando.Accion}: {ex.Message}");
         }
     }
 }

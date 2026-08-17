@@ -3,6 +3,7 @@
     var nodos = ViewBag.Nodos as List<MonitoringApp.Monitoring.Core.Models.Nodo> ?? new();
     var dominios = ViewBag.Dominios as List<MonitoringApp.Monitoring.Core.Models.DominioExpiracion> ?? new();
     var alertas = ViewBag.Alertas as List<MonitoringApp.Monitoring.Core.Models.HistorialAlerta> ?? new();
+    var config = ViewBag.Configuracion as MonitoringApp.Monitoring.Core.Models.ConfiguracionAlerta ?? new();
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -16,6 +17,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 mb-4">
     <span class="navbar-brand fw-bold">⚡ InfraMonitor .NET 10</span>
     <div class="ms-auto d-flex align-items-center gap-3">
+        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalConfig">⚙ Parámetros</button>
         <span class="text-white-50">Usuario: <strong>@User.Identity?.Name</strong></span>
         <form action="/Account/Logout" method="post" class="m-0">
             <button class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
@@ -24,7 +26,7 @@
 </nav>
 
 <div class="container-fluid px-4">
-    <!-- Tarjetas de Métricas -->
+    <!-- Métricas -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm border-0 border-start border-primary border-4 p-3">
@@ -87,7 +89,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     <small class="text-muted">@nodo.TokenAutenticacion</small>
-                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Renovar Token" 
+                                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Gestionar Token" 
                                             onclick="abrirModalToken(@nodo.Id, '@nodo.Nombre', '@nodo.TokenAutenticacion')">🔑</button>
                                 </div>
                             </td>
@@ -123,10 +125,16 @@
                                 }
                             </td>
                             <td class="text-end pe-3">
-                                <form action="/Dashboard/EliminarNodo" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar el nodo @nodo.Nombre y todos sus datos?');">
-                                    <input type="hidden" name="id" value="@nodo.Id" />
-                                    <button class="btn btn-outline-danger btn-sm">Eliminar</button>
-                                </form>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="abrirModalDespliegue('@nodo.Nombre', '@nodo.TokenAutenticacion')">
+                                        🚀 Desplegar Agente
+                                    </button>
+                                    <form action="/Dashboard/EliminarNodo" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar el nodo @nodo.Nombre y todos sus datos?');">
+                                        <input type="hidden" name="id" value="@nodo.Id" />
+                                        <button class="btn btn-outline-danger">Eliminar</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -137,7 +145,7 @@
     </div>
 
     <div class="row g-4 mb-4">
-        <!-- Tabla Dominios -->
+        <!-- Dominios -->
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
@@ -181,7 +189,7 @@
             </div>
         </div>
 
-        <!-- Historial Alertas -->
+        <!-- Alertas -->
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
@@ -234,6 +242,63 @@
     </div>
 </div>
 
+<!-- Modal Desplegar Agente (Instrucciones Docker / Local) -->
+<div class="modal fade" id="modalDespliegue" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🚀 Configuración del Agente: <span id="despliegueNodoNombre" class="text-primary fw-bold"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="despliegueTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="podman-tab" data-bs-toggle="tab" data-bs-target="#tab-podman" type="button">🐳 Docker / Podman</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="local-tab" data-bs-toggle="tab" data-bs-target="#tab-local" type="button">💻 Ejecución Local (.NET / CLI)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="json-tab" data-bs-toggle="tab" data-bs-target="#tab-json" type="button">📄 appsettings.json</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="despliegueTabContent">
+                    <!-- Tab 1: Docker / Podman -->
+                    <div class="tab-pane fade show active" id="tab-podman">
+                        <p class="small text-muted mb-2">Pega este comando en la terminal del cliente (crea el contenedor conectándose al socket del host):</p>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-white p-3 rounded"><code id="codeDocker"></code></pre>
+                            <button class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-2" onclick="copiarAlPortapapeles('codeDocker')">📋 Copiar</button>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Ejecución Local -->
+                    <div class="tab-pane fade" id="tab-local">
+                        <p class="small text-muted mb-2">Exporta las variables de entorno y ejecuta el proyecto directamente:</p>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-white p-3 rounded"><code id="codeLocal"></code></pre>
+                            <button class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-2" onclick="copiarAlPortapapeles('codeLocal')">📋 Copiar</button>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: appsettings.json -->
+                    <div class="tab-pane fade" id="tab-json">
+                        <p class="small text-muted mb-2">Contenido para <code>Monitoring.Agent/appsettings.json</code>:</p>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-white p-3 rounded"><code id="codeJson"></code></pre>
+                            <button class="btn btn-sm btn-outline-light position-absolute top-0 end-0 m-2" onclick="copiarAlPortapapeles('codeJson')">📋 Copiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Nuevo Nodo -->
 <div class="modal fade" id="modalNodo" tabindex="-1">
     <div class="modal-dialog">
@@ -276,7 +341,6 @@
                 <div class="mb-3">
                     <label class="form-label">Nuevo Token Personalizado (Opcional)</label>
                     <input type="text" name="nuevoTokenPersonalizado" class="form-control" placeholder="Dejar en blanco para generar uno aleatorio" />
-                    <small class="text-muted">Si lo dejas vacío, el servidor creará un GUID aleatorio automáticamente.</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -312,6 +376,42 @@
     </div>
 </div>
 
+<!-- Modal Configuración Global -->
+<div class="modal fade" id="modalConfig" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" action="/Dashboard/ActualizarConfiguracion" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">⚙ Parámetros del Servidor & Alertas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Correo Destinatario de Alertas</label>
+                    <input type="email" name="correo" class="form-control" value="@config.CorreoDestinatario" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Timeout Caída de Nodo (Segundos)</label>
+                    <input type="number" name="timeout" class="form-control" value="@config.TimeoutSegundosNodo" min="30" required />
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Aviso SSL (Días)</label>
+                        <input type="number" name="diasSsl" class="form-control" value="@config.DiasAvisoSsl" min="1" required />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Aviso Dominio (Días)</label>
+                        <input type="number" name="diasDominio" class="form-control" value="@config.DiasAvisoDominio" min="1" required />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function abrirModalToken(id, nombre, tokenActual) {
@@ -320,14 +420,48 @@ function abrirModalToken(id, nombre, tokenActual) {
     document.getElementById('tokenActual').value = tokenActual;
     new bootstrap.Modal(document.getElementById('modalToken')).show();
 }
-</script>
-<script>
-    setInterval(() => {
-        const modalAbierto = document.querySelector('.modal.show');
-        if (!modalAbierto) {
-            window.location.reload();
+
+function abrirModalDespliegue(nombre, token) {
+    document.getElementById('despliegueNodoNombre').innerText = nombre;
+    
+    // Detecta la URL base actual del navegador (ej. http://92.113.148.5:8585)
+    const serverUrl = window.location.origin + '/api/HeartbeatApi';
+    
+    // 1. Comando Docker / Podman
+    const dockerCmd = `podman run -d \\
+  --name agent-${nombre.toLowerCase().replace(/\\s+/g, '-')} \\
+  -e AGENT_SERVER_URL="${serverUrl}" \\
+  -e AGENT_TOKEN="${token}" \\
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  --restart unless-stopped \\
+  monitoring-agent`;
+    document.getElementById('codeDocker').innerText = dockerCmd;
+
+    // 2. Comando Local .NET / Linux CLI
+    const localCmd = `export AGENT_SERVER_URL="${serverUrl}"
+export AGENT_TOKEN="${token}"
+dotnet run --project MonitoringApp.csproj`;
+    document.getElementById('codeLocal').innerText = localCmd;
+
+    // 3. JSON para appsettings.json
+    const jsonConfig = JSON.stringify({
+        "AgentSettings": {
+            "ServerUrl": serverUrl,
+            "Token": token,
+            "IntervalSeconds": 60
         }
-    }, 30000);
+    }, null, 2);
+    document.getElementById('codeJson').innerText = jsonConfig;
+
+    new bootstrap.Modal(document.getElementById('modalDespliegue')).show();
+}
+
+function copiarAlPortapapeles(elementId) {
+    const texto = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(texto).then(() => {
+        alert('¡Copiado al portapapeles!');
+    });
+}
 </script>
 </body>
 </html>
