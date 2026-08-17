@@ -543,6 +543,19 @@
           }
         }
       },
+      "Resend/0.8.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/Resend.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Resend.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
         "type": "package",
         "dependencies": {
@@ -2140,6 +2153,21 @@
         "packageIcon.png"
       ]
     },
+    "Resend/0.8.0": {
+      "sha512": "xaG5Q19IbKQ/zEWZ2jviw7mvco6Irz6DuUgnU3YRrF2iCrLq2ADf6jkiGBVq/Xyuqk+2bWBuwGpQPeclfz0RWA==",
+      "type": "package",
+      "path": "resend/0.8.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "icon.png",
+        "lib/net8.0/Resend.dll",
+        "lib/net8.0/Resend.xml",
+        "resend.0.8.0.nupkg.sha512",
+        "resend.nuspec"
+      ]
+    },
     "SQLitePCLRaw.bundle_e_sqlite3/2.1.12": {
       "sha512": "mAgscpQMLw5/nfA1Q5oJVAT29yROUo1ifZGbbTpx/lwZpSxMUGoYbKfmvdm8oXER+RzxqBmmQzeBEVKfeHv2nw==",
       "type": "package",
@@ -2418,7 +2446,8 @@
     "net10.0": [
       "Docker.DotNet >= 3.125.15",
       "Microsoft.EntityFrameworkCore.Design >= 10.0.11",
-      "Microsoft.EntityFrameworkCore.Sqlite >= 10.0.11"
+      "Microsoft.EntityFrameworkCore.Sqlite >= 10.0.11",
+      "Resend >= 0.8.0"
     ]
   },
   "packageFolders": {
@@ -2477,6 +2506,10 @@
           "Microsoft.EntityFrameworkCore.Sqlite": {
             "target": "Package",
             "version": "[10.0.11, )"
+          },
+          "Resend": {
+            "target": "Package",
+            "version": "[0.8.0, )"
           }
         },
         "imports": [

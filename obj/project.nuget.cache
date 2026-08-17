@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "RC6dvgJ4hgw=",
+  "dgSpecHash": "YgJKVF7sfSA=",
   "success": true,
   "projectFilePath": "/home/marioalabi/Nextcloud/Unicaes_Ciclo_8/DESARROLLO MULTIPLATAFORMA DE APLICACIONES WEB/Periodo 1/MonitoringApp/MonitoringApp.csproj",
   "expectedPackageFiles": [
@@ -25,6 +25,7 @@
     "/home/marioalabi/.nuget/packages/microsoft.visualstudio.solutionpersistence/1.0.52/microsoft.visualstudio.solutionpersistence.1.0.52.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/newtonsoft.json/13.0.4/newtonsoft.json.13.0.4.nupkg.sha512",
+    "/home/marioalabi/.nuget/packages/resend/0.8.0/resend.0.8.0.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.12/sqlitepclraw.bundle_e_sqlite3.2.1.12.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/sqlitepclraw.core/2.1.12/sqlitepclraw.core.2.1.12.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.12/sqlitepclraw.lib.e_sqlite3.2.1.12.nupkg.sha512",
