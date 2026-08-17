@@ -97,12 +97,20 @@
                             <td>
                                 @if (nodo.Contenedores.Any())
                                 {
-                                    @foreach (var c in nodo.Contenedores)
-                                    {
-                                        <span class="badge @(c.Estado == "running" ? "bg-primary" : "bg-secondary") mb-1">
-                                            @c.Nombre (@c.Estado)
-                                        </span>
-                                    }
+                                    var runningCount = nodo.Contenedores.Count(c => c.Estado.ToLower().Contains("running") || c.Estado.ToLower().Contains("up"));
+                                    var totalCount = nodo.Contenedores.Count;
+
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary">@runningCount activos</span>
+                                        @if (totalCount - runningCount > 0)
+                                        {
+                                            <span class="badge bg-secondary">@(totalCount - runningCount) detenidos</span>
+                                        }
+                                        <button class="btn btn-outline-dark btn-sm py-0 px-2" 
+                                                onclick='abrirModalContenedores("@nodo.Nombre", @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nodo.Contenedores.Select(c => new { c.Nombre, c.Imagen, c.Estado, Fecha = c.UltimaActualizacion.ToLocalTime().ToString("g") }))))'>
+                                            📦 Ver (@totalCount)
+                                        </button>
+                                    </div>
                                 }
                                 else
                                 {
@@ -458,6 +466,31 @@ function copiarComando(elementId) {
         alert('¡Comando copiado al portapapeles!');
     });
 }
+function abrirModalContenedores(nombreNodo, contenedores) {
+    document.getElementById('nombreNodoContenedores').innerText = nombreNodo;
+    const tbody = document.getElementById('tbodyContenedores');
+    tbody.innerHTML = '';
+
+    if (!contenedores || contenedores.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No hay contenedores registrados</td></tr>';
+    } else {
+        contenedores.forEach(c => {
+            const isRunning = c.Estado.toLowerCase().includes('running') || c.Estado.toLowerCase().includes('up');
+            const badgeClass = isRunning ? 'bg-success' : 'bg-secondary';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="badge ${badgeClass}">${c.Estado}</span></td>
+                <td class="fw-bold text-break">${c.Nombre}</td>
+                <td><code class="text-break">${c.Imagen || 'N/A'}</code></td>
+                <td><small class="text-muted">${c.Fecha || '-'}</small></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    new bootstrap.Modal(document.getElementById('modalContenedores')).show();
+}
 </script>
 <!-- Modal Estilo Cloudflare Connect -->
 <div class="modal fade" id="modalConectarAgente" tabindex="-1">
@@ -512,6 +545,37 @@ function copiarComando(elementId) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal Detalle de Contenedores -->
+<div class="modal fade" id="modalContenedores" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">📦 Contenedores en <span id="nombreNodoContenedores" class="text-primary"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Estado</th>
+                            <th>Nombre</th>
+                            <th>Imagen</th>
+                            <th>Última Actualización</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tbodyContenedores">
+                        <!-- Inyectado dinámicamente con JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>

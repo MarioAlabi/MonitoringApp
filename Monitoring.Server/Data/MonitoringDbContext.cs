@@ -46,7 +46,7 @@ public class MonitoringDbContext : DbContext
             }
         );
 
-        modelBuilder.Entity<Nodo>().HasData(
+        /*modelBuilder.Entity<Nodo>().HasData(
             new Nodo
             {
                 Id = 1,
@@ -56,6 +56,6 @@ public class MonitoringDbContext : DbContext
                 Estado = "OFFLINE",
                 UltimoLatido = null
             }
-        );
+        );*/
     }
 }
