@@ -122,14 +122,15 @@
                                 {
                                     @foreach (var cert in nodo.CertificadosSsl)
                                     {
-                                        <span class="badge @(cert.DiasRestantes <= 15 ? "bg-danger" : "bg-info text-dark") mb-1">
-                                            @cert.DominioHost (@cert.DiasRestantes d)
+                                        var badgeClass = cert.DiasRestantes <= 15 ? "bg-danger" : (cert.DiasRestantes <= 30 ? "bg-warning text-dark" : "bg-info text-dark");
+                                        <span class="badge @badgeClass mb-1" title="Expira: @(cert.FechaExpiracion?.ToString("yyyy-MM-dd") ?? "N/A")">
+                                            🔒 @cert.DominioHost:@cert.Puerto (@cert.DiasRestantes d)
                                         </span>
                                     }
                                 }
                                 else
                                 {
-                                    <span class="text-muted small">Sin certs</span>
+                                    <span class="text-muted small">Sin certificados</span>
                                 }
                             </td>
                             <td class="text-end pe-3">

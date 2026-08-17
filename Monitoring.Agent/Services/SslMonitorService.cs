@@ -1,6 +1,5 @@
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using MonitoringApp.Monitoring.Core.DTOs;
 
@@ -10,47 +9,54 @@ public class SslMonitorService
 {
     public async Task<List<CertificadoSslDto>> AuditarCertificadosAsync(List<string> hosts)
     {
-        var certs = new List<CertificadoSslDto>();
+        var resultados = new List<CertificadoSslDto>();
 
-        foreach (var host in hosts)
+        foreach (var hostStr in hosts)
         {
-            var partes = host.Split(':');
-            var dominio = partes[0].Trim();
+            if (string.IsNullOrWhiteSpace(hostStr)) continue;
+
+            var partes = hostStr.Split(':');
+            var host = partes[0].Trim();
             var puerto = partes.Length > 1 && int.TryParse(partes[1], out var p) ? p : 443;
 
             try
             {
                 using var tcpClient = new TcpClient();
-                await tcpClient.ConnectAsync(dominio, puerto);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await tcpClient.ConnectAsync(host, puerto, cts.Token);
 
                 using var sslStream = new SslStream(
                     tcpClient.GetStream(),
                     false,
-                    (sender, certificate, chain, sslPolicyErrors) => true // Acepta certs para poder leer la fecha incluso si hay advertencias
+                    // Acepta certificados autofirmados/locales para extraer la metadata sin lanzar excepción
+                    (sender, certificate, chain, sslPolicyErrors) => true
                 );
 
-                await sslStream.AuthenticateAsClientAsync(dominio);
-
-                if (sslStream.RemoteCertificate is X509Certificate2 cert)
+                await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
                 {
-                    var expDate = cert.NotAfter.ToUniversalTime();
-                    var dias = (int)(expDate - DateTime.UtcNow).TotalDays;
+                    TargetHost = host
+                });
 
-                    certs.Add(new CertificadoSslDto
+                if (sslStream.RemoteCertificate != null)
+                {
+                    using var cert2 = new X509Certificate2(sslStream.RemoteCertificate);
+                    var diasRestantes = (int)(cert2.NotAfter - DateTime.UtcNow).TotalDays;
+
+                    resultados.Add(new CertificadoSslDto
                     {
-                        DominioHost = dominio,
+                        DominioHost = host,
                         Puerto = puerto,
-                        FechaExpiracion = expDate,
-                        DiasRestantes = dias
+                        FechaExpiracion = cert2.NotAfter.ToUniversalTime(),
+                        DiasRestantes = diasRestantes
                     });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Agente] Error al auditar SSL en {dominio}:{puerto} -> {ex.Message}");
+                Console.WriteLine($"[Agente SSL] Error al auditar {host}:{puerto} -> {ex.Message}");
             }
         }
 
-        return certs;
+        return resultados;
     }
 }

@@ -13,7 +13,7 @@ public class AgentWorkerService
     private string _serverUrl;
     private string _token;
     private int _intervaloSegundos = 60;
-    private List<string> _hostsParaAuditar = new() { "google.com:443" };
+    private List<string> _hostsParaAuditar;
 
     public AgentWorkerService()
     {
@@ -22,6 +22,19 @@ public class AgentWorkerService
 
         _token = Environment.GetEnvironmentVariable("AGENT_TOKEN") 
             ?? "sec-token-truenas-2026-xyz";
+
+        // Lee los hosts desde la variable de entorno AGENT_SSL_HOSTS (separados por coma)
+        var envSslHosts = Environment.GetEnvironmentVariable("AGENT_SSL_HOSTS");
+        if (!string.IsNullOrWhiteSpace(envSslHosts))
+        {
+            _hostsParaAuditar = envSslHosts
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+        else
+        {
+            _hostsParaAuditar = new List<string> { "127.0.0.1:443" };
+        }
 
         _dockerService = new DockerMonitorService();
         _sslService = new SslMonitorService();
@@ -36,6 +49,7 @@ public class AgentWorkerService
     public async Task IniciarBucleAsync(CancellationToken cancellationToken)
     {
         Console.WriteLine($"[Agente] Conectando hacia: {_serverUrl}");
+        Console.WriteLine($"[Agente] Hosts SSL a auditar: {string.Join(", ", _hostsParaAuditar)}");
 
         while (!cancellationToken.IsCancellationRequested)
         {
