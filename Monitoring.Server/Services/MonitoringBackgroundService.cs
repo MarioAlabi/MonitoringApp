@@ -64,8 +64,21 @@ public class MonitoringBackgroundService : BackgroundService
                     }
                 }
 
-                // 3. Revisión de Dominios RDAP
+                // 3. Revisión y Auditoría de Dominios RDAP / WHOIS
                 await _rdapService.ActualizarExpiracionDominiosAsync(db);
+
+                var dominios = await db.DominiosExpiracion.ToListAsync(stoppingToken);
+                foreach (var dom in dominios)
+                {
+                    if (dom.DiasRestantes.HasValue && dom.DiasRestantes <= config.DiasAvisoDominio && !dom.AlertaExpiracionEnviada)
+                    {
+                        await _emailService.EnviarAlertaAsync(
+                            "DOMINIO_EXPIRACION",
+                            $"El dominio '{dom.NombreDominio}' ({dom.ProveedorRegistro}) está próximo a expirar. Quedan {dom.DiasRestantes} días (Expira: {dom.FechaExpiracion})."
+                        );
+                        dom.AlertaExpiracionEnviada = true;
+                    }
+                }
 
                 await db.SaveChangesAsync(stoppingToken);
             }

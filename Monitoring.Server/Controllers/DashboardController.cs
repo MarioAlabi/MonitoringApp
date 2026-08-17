@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MonitoringApp.Monitoring.Core.Models;
 using MonitoringApp.Monitoring.Server.Data;
+using MonitoringApp.Monitoring.Server.Services;
 
 namespace MonitoringApp.Monitoring.Server.Controllers;
 
@@ -158,6 +159,16 @@ public class DashboardController : Controller
         config.DiasAvisoDominio = diasDominio;
 
         await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+    [HttpPost]
+    public async Task<IActionResult> ActualizarDominio(int id, [FromServices] RdapDomainService rdapService)
+    {
+        var dom = await _context.DominiosExpiracion.FindAsync(id);
+        if (dom != null)
+        {
+            await rdapService.ActualizarExpiracionDominiosAsync(_context);
+        }
         return RedirectToAction(nameof(Index));
     }
 }

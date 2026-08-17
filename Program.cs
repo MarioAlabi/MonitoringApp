@@ -49,6 +49,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddSingleton<EmailAlertService>();
 builder.Services.AddHostedService<MonitoringBackgroundService>();
+builder.Services.AddSingleton<RdapDomainService>();
 
 var app = builder.Build();
 
