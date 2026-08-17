@@ -430,12 +430,11 @@ function abrirModalToken(id, nombre, tokenActual) {
 
 function abrirModalConectar(nombre, token) {
     document.getElementById('nombreNodoConectar').innerText = nombre;
-    
-    // Detecta la URL base actual (ej. http://92.113.148.5:8585/api/HeartbeatApi)
+
     const baseUrl = window.location.origin + '/api/HeartbeatApi';
     const cleanName = nombre.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-    // 1. Comando Docker / Podman (Imagen de Docker Hub)
+    // 1. Comando Docker / Podman
     const dockerCmd = `podman run -d \\
   --name agent-${cleanName} \\
   -e AGENT_SERVER_URL="${baseUrl}" \\
@@ -445,10 +444,30 @@ function abrirModalConectar(nombre, token) {
   --security-opt label=disable \\
   --restart unless-stopped \\
   marioalabi/infra-monitor-agent:latest`;
-    
+
     document.getElementById('cmdDocker').innerText = dockerCmd;
 
-    // 2. Comando Git / .NET CLI
+    // 2. Archivo Docker Compose
+    const composeCmd = `services:
+  agent-${cleanName}:
+    image: marioalabi/infra-monitor-agent:latest
+    container_name: agent-${cleanName}
+    environment:
+      - AGENT_SERVER_URL=${baseUrl}
+      - AGENT_TOKEN=${token}
+      # - AGENT_NODE_IP=192.168.1.50 # Descomentar para forzar IP manual
+    volumes:
+      # Para Docker:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Para Podman usa esta en su lugar:
+      # - \${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock:/var/run/docker.sock:ro
+    security_opt:
+      - label=disable
+    restart: unless-stopped`;
+
+    document.getElementById('cmdCompose').innerText = composeCmd;
+
+    // 3. Comando Git / .NET CLI
     const gitCmd = `git clone https://github.com/TU_USUARIO/TU_REPO.git agent-${cleanName} && \\
 cd agent-${cleanName} && \\
 AGENT_SERVER_URL="${baseUrl}" \\
@@ -507,12 +526,17 @@ function abrirModalContenedores(nombreNodo, contenedores) {
                 <ul class="nav nav-pills nav-fill mb-3" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-docker" type="button">
-                            🐳 Docker / Podman (Recomendado)
+                            🐳 Docker / Podman
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-compose" type="button">
+                            📄 Docker Compose
                         </button>
                     </li>
                     <li class="nav-item">
                         <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-git" type="button">
-                            🐙 Clonar con Git & .NET
+                            🐙 Clonar Git
                         </button>
                     </li>
                 </ul>
@@ -539,6 +563,17 @@ function abrirModalContenedores(nombreNodo, contenedores) {
                         </div>
                         <div class="alert alert-light border small text-muted mt-2">
                             💡 Requiere .NET 10 SDK y Git instalados en la máquina cliente.
+                        </div>
+                    </div>
+                    <!-- Opción 3: Docker Compose -->
+                    <div class="tab-pane fade" id="tab-compose">
+                        <label class="form-label small fw-bold text-secondary">Archivo <code>docker-compose.yml</code>:</label>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-light p-3 rounded font-monospace small"><code id="cmdCompose"></code></pre>
+                            <button class="btn btn-sm btn-outline-warning position-absolute top-0 end-0 m-2" onclick="copiarComando('cmdCompose')">📋 Copiar</button>
+                        </div>
+                        <div class="alert alert-light border small text-muted mt-2">
+                            💡 Guarda este contenido en un archivo <code>docker-compose.yml</code> y levántalo ejecutando <code>docker compose up -d</code>.
                         </div>
                     </div>
                 </div>
