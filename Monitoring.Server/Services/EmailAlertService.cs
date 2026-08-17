@@ -9,13 +9,17 @@ public class EmailAlertService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IResend _resend;
+    private readonly string _fromEmail;
 
     public EmailAlertService(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
 
-        var apiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY") 
-                     ?? "re_A4s35Fmj_JbZMf2fTx1We6W4tfhTsPVSD";
+        // Lee la clave de API desde el entorno
+        var apiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY") ?? string.Empty;
+        
+        // Remitente: usa tu dominio marioalabi.com si está configurado
+        _fromEmail = Environment.GetEnvironmentVariable("RESEND_FROM_EMAIL") ?? "alerts@marioalabi.com";
 
         _resend = ResendClient.Create(apiKey);
     }
@@ -28,7 +32,7 @@ public class EmailAlertService
         var config = await db.ConfiguracionesAlertas.FirstOrDefaultAsync();
         var destinatario = !string.IsNullOrWhiteSpace(config?.CorreoDestinatario) 
             ? config.CorreoDestinatario 
-            : "luis.balcaceres@catolica.edu.sv";
+            : (Environment.GetEnvironmentVariable("ALERT_DEST_EMAIL") ?? "admin@marioalabi.com");
 
         var asunto = tipo switch
         {
@@ -51,7 +55,7 @@ public class EmailAlertService
         {
             var email = new EmailMessage
             {
-                From = "onboarding@resend.dev",
+                From = _fromEmail,
                 To = destinatario,
                 Subject = asunto,
                 HtmlBody = html
