@@ -435,11 +435,13 @@ function abrirModalConectar(nombre, token) {
     const baseUrl = window.location.origin + '/api/HeartbeatApi';
     const cleanName = nombre.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-    // 1. Comando Docker / Podman
+    // 1. Comando Docker / Podman CLI
     const dockerCmd = `podman run -d \\
   --name agent-${cleanName} \\
+  -e RUN_AS_AGENT="true" \\
   -e AGENT_SERVER_URL="${baseUrl}" \\
   -e AGENT_TOKEN="${token}" \\
+  -e AGENT_SSL_HOSTS="127.0.0.1:443" \\
   -e AGENT_NODE_IP="$(hostname -I | awk '{print $1}')" \\
   -v \${XDG_RUNTIME_DIR:-/run}/podman/podman.sock:/var/run/docker.sock:ro \\
   --security-opt label=disable \\
@@ -454,13 +456,15 @@ function abrirModalConectar(nombre, token) {
     image: marioalabi/infra-monitor-agent:latest
     container_name: agent-${cleanName}
     environment:
+      - RUN_AS_AGENT=true
       - AGENT_SERVER_URL=${baseUrl}
       - AGENT_TOKEN=${token}
-      # - AGENT_NODE_IP=192.168.1.50 # Descomentar para forzar IP manual
+      - AGENT_SSL_HOSTS=127.0.0.1:443
+      # - AGENT_NODE_IP=192.168.1.50
     volumes:
-      # Para Docker:
+      # Socket para Docker estándar:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Para Podman usa esta en su lugar:
+      # O Socket para Podman en Fedora/RHEL:
       # - \${XDG_RUNTIME_DIR:-/run/user/1000}/podman/podman.sock:/var/run/docker.sock:ro
     security_opt:
       - label=disable
@@ -468,11 +472,13 @@ function abrirModalConectar(nombre, token) {
 
     document.getElementById('cmdCompose').innerText = composeCmd;
 
-    // 3. Comando Git / .NET CLI
-    const gitCmd = `git clone https://github.com/TU_USUARIO/TU_REPO.git agent-${cleanName} && \\
+    // 3. One-Liner Clonar Git & .NET CLI
+    const gitCmd = `git clone https://github.com/marioalabi/MonitoringApp.git agent-${cleanName} && \\
 cd agent-${cleanName} && \\
+RUN_AS_AGENT="true" \\
 AGENT_SERVER_URL="${baseUrl}" \\
 AGENT_TOKEN="${token}" \\
+AGENT_SSL_HOSTS="127.0.0.1:443" \\
 dotnet run --project MonitoringApp.csproj`;
 
     document.getElementById('cmdGit').innerText = gitCmd;
@@ -486,6 +492,7 @@ function copiarComando(elementId) {
         alert('¡Comando copiado al portapapeles!');
     });
 }
+
 function abrirModalContenedores(nombreNodo, contenedores) {
     document.getElementById('nombreNodoContenedores').innerText = nombreNodo;
     const tbody = document.getElementById('tbodyContenedores');
