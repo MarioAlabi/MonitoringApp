@@ -33,7 +33,7 @@ public class CertificadoSsl
     [Column("alerta_expiracion_enviada")]
     public bool AlertaExpiracionEnviada { get; set; } = false;
 
-    // Relación opcional con Nodo
+    // Relación opcional con el Nodo
     [ForeignKey(nameof(NodoId))]
     public Nodo? Nodo { get; set; }
 }

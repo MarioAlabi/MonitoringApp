@@ -2,6 +2,22 @@
   "version": 3,
   "targets": {
     "net10.0": {
+      "Docker.DotNet/3.125.15": {
+        "type": "package",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        },
+        "compile": {
+          "lib/netstandard2.1/Docker.DotNet.dll": {
+            "related": ".pdb"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.1/Docker.DotNet.dll": {
+            "related": ".pdb"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -517,7 +533,7 @@
       "Newtonsoft.Json/13.0.4": {
         "type": "package",
         "compile": {
-          "lib/net6.0/_._": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
             "related": ".xml"
           }
         },
@@ -792,6 +808,23 @@
     }
   },
   "libraries": {
+    "Docker.DotNet/3.125.15": {
+      "sha512": "XN8FKxVv8Mjmwu104/Hl9lM61pLY675s70gzwSj8KR5pwblo8HfWLcCuinh9kYsqujBkMH4HVRCEcRuU6al4BQ==",
+      "type": "package",
+      "path": "docker.dotnet/3.125.15",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "docker.dotnet.3.125.15.nupkg.sha512",
+        "docker.dotnet.nuspec",
+        "icon.png",
+        "lib/netstandard2.0/Docker.DotNet.dll",
+        "lib/netstandard2.0/Docker.DotNet.pdb",
+        "lib/netstandard2.1/Docker.DotNet.dll",
+        "lib/netstandard2.1/Docker.DotNet.pdb"
+      ]
+    },
     "Humanizer.Core/2.14.1": {
       "sha512": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw==",
       "type": "package",
@@ -2383,6 +2416,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "Docker.DotNet >= 3.125.15",
       "Microsoft.EntityFrameworkCore.Design >= 10.0.11",
       "Microsoft.EntityFrameworkCore.Sqlite >= 10.0.11"
     ]
@@ -2430,6 +2464,10 @@
       "net10.0": {
         "targetAlias": "net10.0",
         "dependencies": {
+          "Docker.DotNet": {
+            "target": "Package",
+            "version": "[3.125.15, )"
+          },
           "Microsoft.EntityFrameworkCore.Design": {
             "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
             "suppressParent": "All",

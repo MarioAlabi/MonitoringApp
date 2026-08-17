@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "wh6Usw+rwKE=",
+  "dgSpecHash": "RC6dvgJ4hgw=",
   "success": true,
   "projectFilePath": "/home/marioalabi/Nextcloud/Unicaes_Ciclo_8/DESARROLLO MULTIPLATAFORMA DE APLICACIONES WEB/Periodo 1/MonitoringApp/MonitoringApp.csproj",
   "expectedPackageFiles": [
+    "/home/marioalabi/.nuget/packages/docker.dotnet/3.125.15/docker.dotnet.3.125.15.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/microsoft.build.framework/18.0.2/microsoft.build.framework.18.0.2.nupkg.sha512",
     "/home/marioalabi/.nuget/packages/microsoft.codeanalysis.analyzers/3.11.0/microsoft.codeanalysis.analyzers.3.11.0.nupkg.sha512",

@@ -20,7 +20,6 @@ public class MonitoringDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Índices para búsquedas rápidas
         modelBuilder.Entity<Nodo>()
             .HasIndex(n => n.TokenAutenticacion)
             .IsUnique();
@@ -35,7 +34,7 @@ public class MonitoringDbContext : DbContext
             .HasIndex(d => d.NombreDominio)
             .IsUnique();
 
-        // Seed inicial por defecto
+        // Seed inicial
         modelBuilder.Entity<ConfiguracionAlerta>().HasData(
             new ConfiguracionAlerta
             {

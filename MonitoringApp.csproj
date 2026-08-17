@@ -7,12 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Monitoring.Agent\Services\" />
-      <Folder Include="Monitoring.Core\DTOs\" />
-      <Folder Include="Monitoring.Server\Services\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <AdditionalFiles Include="Monitoring.Server\Views\Home\Index.cshtml" />
       <AdditionalFiles Include="Monitoring.Server\Views\Home\Privacy.cshtml" />
       <AdditionalFiles Include="Monitoring.Server\Views\Shared\Error.cshtml" />
@@ -23,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Docker.DotNet" Version="3.125.15" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         <PrivateAssets>all</PrivateAssets>

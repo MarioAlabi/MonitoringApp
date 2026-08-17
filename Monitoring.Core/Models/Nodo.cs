@@ -37,5 +37,4 @@ public class Nodo
 
     // Relaciones
     public ICollection<Contenedor> Contenedores { get; set; } = new List<Contenedor>();
-    public ICollection<CertificadoSsl> CertificadosSsl { get; set; } = new List<CertificadoSsl>();
-}
+    public ICollection<CertificadoSsl> CertificadosSsl { get; set; } = new List<CertificadoSsl>();}
