@@ -126,11 +126,10 @@
                             </td>
                             <td class="text-end pe-3">
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" 
-                                            onclick="abrirModalDespliegue('@nodo.Nombre', '@nodo.TokenAutenticacion')">
-                                        🚀 Desplegar Agente
+                                    <button class="btn btn-primary" onclick="abrirModalConectar('@nodo.Nombre', '@nodo.TokenAutenticacion')">
+                                        🚀 Conectar
                                     </button>
-                                    <form action="/Dashboard/EliminarNodo" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar el nodo @nodo.Nombre y todos sus datos?');">
+                                    <form action="/Dashboard/EliminarNodo" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar el nodo @nodo.Nombre?');">
                                         <input type="hidden" name="id" value="@nodo.Id" />
                                         <button class="btn btn-outline-danger">Eliminar</button>
                                     </form>
@@ -421,47 +420,101 @@ function abrirModalToken(id, nombre, tokenActual) {
     new bootstrap.Modal(document.getElementById('modalToken')).show();
 }
 
-function abrirModalDespliegue(nombre, token) {
-    document.getElementById('despliegueNodoNombre').innerText = nombre;
+function abrirModalConectar(nombre, token) {
+    document.getElementById('nombreNodoConectar').innerText = nombre;
     
-    // Detecta la URL base actual del navegador (ej. http://92.113.148.5:8585)
-    const serverUrl = window.location.origin + '/api/HeartbeatApi';
-    
-    // 1. Comando Docker / Podman
+    // Detecta la URL base actual (ej. http://92.113.148.5:8585/api/HeartbeatApi)
+    const baseUrl = window.location.origin + '/api/HeartbeatApi';
+    const cleanName = nombre.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+    // 1. Comando Docker / Podman (Imagen de Docker Hub)
     const dockerCmd = `podman run -d \\
-  --name agent-${nombre.toLowerCase().replace(/\\s+/g, '-')} \\
-  -e AGENT_SERVER_URL="${serverUrl}" \\
+  --name agent-${cleanName} \\
+  -e AGENT_SERVER_URL="${baseUrl}" \\
   -e AGENT_TOKEN="${token}" \\
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  -e AGENT_NODE_IP="$(hostname -I | awk '{print $1}')" \\
+  -v \${XDG_RUNTIME_DIR:-/run}/podman/podman.sock:/var/run/docker.sock:ro \\
+  --security-opt label=disable \\
   --restart unless-stopped \\
-  monitoring-agent`;
-    document.getElementById('codeDocker').innerText = dockerCmd;
+  marioalabi/infra-monitor-agent:latest`;
+    
+    document.getElementById('cmdDocker').innerText = dockerCmd;
 
-    // 2. Comando Local .NET / Linux CLI
-    const localCmd = `export AGENT_SERVER_URL="${serverUrl}"
-export AGENT_TOKEN="${token}"
+    // 2. Comando Git / .NET CLI
+    const gitCmd = `git clone https://github.com/TU_USUARIO/TU_REPO.git agent-${cleanName} && \\
+cd agent-${cleanName} && \\
+AGENT_SERVER_URL="${baseUrl}" \\
+AGENT_TOKEN="${token}" \\
 dotnet run --project MonitoringApp.csproj`;
-    document.getElementById('codeLocal').innerText = localCmd;
 
-    // 3. JSON para appsettings.json
-    const jsonConfig = JSON.stringify({
-        "AgentSettings": {
-            "ServerUrl": serverUrl,
-            "Token": token,
-            "IntervalSeconds": 60
-        }
-    }, null, 2);
-    document.getElementById('codeJson').innerText = jsonConfig;
+    document.getElementById('cmdGit').innerText = gitCmd;
 
-    new bootstrap.Modal(document.getElementById('modalDespliegue')).show();
+    new bootstrap.Modal(document.getElementById('modalConectarAgente')).show();
 }
 
-function copiarAlPortapapeles(elementId) {
+function copiarComando(elementId) {
     const texto = document.getElementById(elementId).innerText;
     navigator.clipboard.writeText(texto).then(() => {
-        alert('¡Copiado al portapapeles!');
+        alert('¡Comando copiado al portapapeles!');
     });
 }
 </script>
+<!-- Modal Estilo Cloudflare Connect -->
+<div class="modal fade" id="modalConectarAgente" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">🚀 Conectar Agente: <span id="nombreNodoConectar" class="text-warning"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted">Elige tu método de instalación para iniciar el agente recolector en el servidor o máquina cliente:</p>
+
+                <!-- Selector de Entorno -->
+                <ul class="nav nav-pills nav-fill mb-3" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-docker" type="button">
+                            🐳 Docker / Podman (Recomendado)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-git" type="button">
+                            🐙 Clonar con Git & .NET
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content pt-2">
+                    <!-- Opción 1: Docker / Podman -->
+                    <div class="tab-pane fade show active" id="tab-docker">
+                        <label class="form-label small fw-bold text-secondary">Ejecutar contenedor desde Docker Hub:</label>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-light p-3 rounded font-monospace small"><code id="cmdDocker"></code></pre>
+                            <button class="btn btn-sm btn-outline-warning position-absolute top-0 end-0 m-2" onclick="copiarComando('cmdDocker')">📋 Copiar</button>
+                        </div>
+                        <div class="alert alert-light border small text-muted mt-2">
+                            💡 Conecta el socket local (Docker/Podman) en modo solo lectura (<code>:ro</code>) para detectar el estado de los contenedores automáticamente.
+                        </div>
+                    </div>
+
+                    <!-- Opción 2: Git / .NET CLI -->
+                    <div class="tab-pane fade" id="tab-git">
+                        <label class="form-label small fw-bold text-secondary">One-liner para clonar, configurar y ejecutar con .NET:</label>
+                        <div class="position-relative">
+                            <pre class="bg-dark text-light p-3 rounded font-monospace small"><code id="cmdGit"></code></pre>
+                            <button class="btn btn-sm btn-outline-warning position-absolute top-0 end-0 m-2" onclick="copiarComando('cmdGit')">📋 Copiar</button>
+                        </div>
+                        <div class="alert alert-light border small text-muted mt-2">
+                            💡 Requiere .NET 10 SDK y Git instalados en la máquina cliente.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
